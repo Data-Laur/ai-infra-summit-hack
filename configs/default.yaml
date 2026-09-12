@@ -1,0 +1,25 @@
+# Shared pipeline configuration. Stages read what they need from here.
+
+seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# Recovery: if verify() asks for a replan, the pipeline re-runs
+# plan -> execute -> verify up to this many times, then reports FAIL.
+max_retries: 2
+
+# Domain-randomization ranges for stage7_eval. TODO(Abdullah): tune once the
+# MuJoCo scene is in assets/.
+randomization:
+  object_placement_cm: [-5.0, 5.0]   # +/- offset applied to nominal object positions
+  lighting_intensity: [0.6, 1.4]     # multiplier on scene light
+  friction: [0.6, 1.2]               # multiplier on contact friction
+  mass_scale: [0.8, 1.2]             # multiplier on object masses
+
+arms:
+  ids: ["A", "B"]
+
+hardware:
+  target: intel_core_ultra           # OpenVINO device target for stage5
+
+models:
+  policy_checkpoint: assets/models/policy.safetensors   # TODO(Bidipta): after training
+  openvino_ir: assets/models/policy_openvino.xml        # TODO(Lauren): after conversion
