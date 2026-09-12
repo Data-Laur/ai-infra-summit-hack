@@ -1,0 +1,38 @@
+# Integration Contracts
+
+Every stage lives in its own folder and exposes **exactly one public entrypoint**
+(stage 1 also has an audio variant). All types come from [`common/types.py`](common/types.py) —
+they are pydantic models, so violations fail loudly at the boundary.
+
+**Do not change a signature or a model in this table without agreeing it here first**
+(PR that updates both the code and this file).
+
+| Stage | Owner | Function signature | Input | Output | Folder |
+|-------|-------|--------------------|-------|--------|--------|
+| 1. Voice → Task | Alex | `parse_text(text: str) -> Task` | natural-language command | `Task` | `stage1_voice/` |
+| 1b. Audio → Task | Alex | `parse_command(audio_path: str) -> Task` | path to audio file | `Task` | `stage1_voice/` |
+| 2. Perception | Lauren | `perceive(image=None) -> SceneState` | camera frame (or None in sim) | `SceneState` | `stage2_perception/` |
+| 3. Policy / planning | Bidipta + Azeem | `plan(task: Task, scene: SceneState) -> list[Action]` | `Task`, `SceneState` | ordered `list[Action]` | `stage3_policy/` |
+| 4. Bimanual execution | Azeem | `execute(actions: list[Action], sim=None) -> ExecutionResult` | `list[Action]`, MuJoCo sim handle | `ExecutionResult` | `stage4_bimanual/` |
+| 4a. Scene reset | Azeem | `reset_scene(seed: int) -> sim` | seed; randomization ranges read from `configs/default.yaml` | MuJoCo sim handle | `stage4_bimanual/` |
+| 4b. Camera | Azeem | `get_camera_frame(sim) -> image` | sim handle | camera frame (`np.ndarray` in the real implementation) | `stage4_bimanual/` |
+| 5. OpenVINO benchmark | Lauren | `run_benchmark() -> BenchmarkResult` | — (reads model from `configs/default.yaml`) | `BenchmarkResult`: model_name / device / precision / latency_ms / throughput | `stage5_openvino/` |
+| 6. Verify / recover | Abdullah | `verify(scene_after: SceneState, task: Task) -> VerifyResult` | post-execution `SceneState`, original `Task` | `VerifyResult` | `stage6_verify/` |
+| 7. Evaluation | Abdullah | `evaluate(seeds: list[int]) -> EvalReport` | randomization seeds | `EvalReport` | `stage7_eval/` |
+| 8. Integration | Alex | `common/pipeline.py::run_once(command, seed=0, max_retries=None) -> RunResult` (single-run entrypoint) + `scripts/*.py` CLIs | command, seed | `RunResult` | `common/`, `scripts/`, repo root |
+
+## Ground rules
+
+- Import types with `from common.types import Task, SceneState, ...` — never redefine them locally.
+- Each stage's public function is re-exported from its package `__init__.py`,
+  so callers write `from stage3_policy import plan`.
+- Keep heavy imports (mujoco, lerobot, openvino, opencv, speechmatics, anthropic)
+  **out of module top level** until your real implementation lands, or guard them —
+  the stub pipeline must run with only `pydantic` + `pyyaml` installed.
+- Data flow: `reset_scene(seed)` → `parse_text` → `perceive(get_camera_frame(sim))` →
+  `plan` → `execute` → `verify` (stage 5 is standalone).
+- Recovery: if `verify` returns `replan=True`, the pipeline re-runs
+  `plan → execute → verify` up to `max_retries` (from `configs/default.yaml`),
+  then reports FAIL.
+- The single-run loop is implemented once in `common/pipeline.py::run_once` —
+  stage 7 must call `run_once` rather than re-implementing it.
