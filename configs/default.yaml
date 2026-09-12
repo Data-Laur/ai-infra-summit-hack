@@ -17,6 +17,19 @@ randomization:
 arms:
   ids: ["A", "B"]
 
+# Scene vocabulary — the single source of truth for allowed names in stage1/stage3.
+# TODO(Azeem): keep scene.objects in sync with the MuJoCo scene in assets/.
+scene:
+  objects: [plate, mug, water_bottle, spoon, fork]
+  drawers: [top_drawer]
+  destinations: [table]
+  arms: [A, B]
+
+# Stage 1 (voice -> Task) parser settings.
+voice:
+  model: claude-sonnet-5
+  max_retries: 1
+
 hardware:
   target: intel_core_ultra           # OpenVINO device target for stage5
 

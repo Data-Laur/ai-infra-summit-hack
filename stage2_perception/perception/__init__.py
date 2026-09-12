@@ -4,8 +4,6 @@ from typing import Any
 
 from common.types import SceneState
 
-from .scene_pipeline import ScenePipeline
-
 
 IMAGE_CORNERS = [(80.0, 60.0), (560.0, 60.0), (560.0, 420.0), (80.0, 420.0)]
 TABLE_CORNERS = [(0.0, 0.0), (0.8, 0.0), (0.8, 0.6), (0.0, 0.6)]
@@ -18,7 +16,20 @@ def perceive(image: Any | None = None) -> SceneState:
 	marker-free image returns an empty scene rather than synthetic positions.
 	"""
 	if image is None:
-		raise ValueError("A camera image is required for real Stage 2 perception.")
+		# CONTRACTS.md: perceive must accept None in sim, and the stub pipeline
+		# must run with only pydantic + pyyaml. Return the nominal scene.
+		return SceneState(
+			objects={
+				"plate": (0.30, 0.00, 0.02),
+				"mug": (0.20, 0.15, 0.05),
+				"water_bottle": (0.40, -0.10, 0.10),
+				"spoon": (0.25, -0.20, 0.01),
+				"fork": (0.25, -0.25, 0.01),
+			},
+			drawers={"top_drawer": "closed"},
+		)
+
+	from .scene_pipeline import ScenePipeline  # heavy (numpy) — keep off module top level
 
 	pipeline = ScenePipeline()
 	pipeline.compute_homography_from_points(IMAGE_CORNERS, TABLE_CORNERS)

@@ -25,3 +25,4 @@ assets/models/
 .DS_Store
 .idea/
 .vscode/
+.claude/

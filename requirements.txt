@@ -10,3 +10,6 @@ lerobot                # stage3 policy training/inference (Bidipta + Azeem)
 openvino               # stage5 Intel optimization (Lauren)
 speechmatics-python    # stage1 ASR (Alex)
 anthropic              # stage1 instruction parsing (Alex)
+
+# --- Dev / test ---
+pytest
