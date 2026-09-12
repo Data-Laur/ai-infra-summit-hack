@@ -106,6 +106,32 @@
       <geom name="plate_geom" type="cylinder" size="0.055 0.006" mass="0.10" friction="1.2 0.01 0.001" rgba="0.95 0.95 0.95 1"/>
       <site name="plate_site" pos="0 0 0"/>
     </body>
+
+    <!-- Water Bottle (For Arm A pouring into Arm B's mug) -->
+    <body name="water_bottle" pos="0.08 -0.06 0.76">
+      <freejoint/>
+      <!-- Bottle main body -->
+      <geom name="bottle_body" type="cylinder" size="0.026 0.050" mass="0.14" friction="1.5 0.01 0.001" rgba="0.15 0.65 0.85 0.85"/>
+      <!-- Bottle neck and cap -->
+      <geom name="bottle_cap" type="cylinder" size="0.012 0.014" pos="0 0 0.064" mass="0.01" friction="1.5 0.01 0.001" rgba="0.9 0.9 0.9 1"/>
+      <site name="bottle_site" pos="0 0 0"/>
+    </body>
+
+    <!-- Spoon (Dinner setting utensil) -->
+    <body name="spoon" pos="0.14 0.04 0.705">
+      <freejoint/>
+      <geom name="spoon_handle" type="box" size="0.004 0.035 0.002" mass="0.015" friction="1.2 0.01 0.001" rgba="0.75 0.75 0.80 1"/>
+      <geom name="spoon_bowl" type="sphere" size="0.012" pos="0 0.042 0.002" mass="0.01" friction="1.2 0.01 0.001" rgba="0.75 0.75 0.80 1"/>
+      <site name="spoon_site" pos="0 0 0"/>
+    </body>
+
+    <!-- Fork (Dinner setting utensil) -->
+    <body name="fork" pos="0.14 -0.04 0.705">
+      <freejoint/>
+      <geom name="fork_handle" type="box" size="0.004 0.035 0.002" mass="0.015" friction="1.2 0.01 0.001" rgba="0.75 0.75 0.80 1"/>
+      <geom name="fork_prongs" type="box" size="0.008 0.012 0.002" pos="0 0.042 0" mass="0.01" friction="1.2 0.01 0.001" rgba="0.75 0.75 0.80 1"/>
+      <site name="fork_site" pos="0 0 0"/>
+    </body>
   </worldbody>
 
   <!-- Prevent accidental contact glitches between housing and plate -->

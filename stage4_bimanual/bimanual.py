@@ -73,7 +73,7 @@ class MuJoCoSim:
                 "mug": (0.05, 0.15, 0.745),
             }
         tracked = {}
-        for obj_name in ["plate", "mug", "drawer_unit"]:
+        for obj_name in ["plate", "mug", "water_bottle", "spoon", "fork", "drawer_unit"]:
             try:
                 body_id = mujoco.mj_name2id(
                     self.model, mujoco.mjtObj.mjOBJ_BODY, obj_name
@@ -121,7 +121,7 @@ def reset_scene(seed: int = 0) -> Any:
     placement_cm = cfg.get("object_placement_cm", [-3.0, 3.0])
     jitter_range = [val / 100.0 for val in placement_cm]  # convert cm to meters
 
-    for obj_name in ["mug"]:
+    for obj_name in ["mug", "water_bottle", "spoon", "fork"]:
         try:
             body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, obj_name)
             if body_id >= 0:
@@ -207,6 +207,9 @@ def execute(actions: list[Action], sim: Any | None = None) -> ExecutionResult:
         objects={
             "plate": sim_objects.get("plate", (0.0, 0.0, 0.72)),
             "mug": sim_objects.get("mug", (0.08, 0.12, 0.745)),
+            "water_bottle": sim_objects.get("water_bottle", (0.08, -0.06, 0.76)),
+            "spoon": sim_objects.get("spoon", (0.14, 0.04, 0.705)),
+            "fork": sim_objects.get("fork", (0.14, -0.04, 0.705)),
         },
         drawers={"top_drawer": drawer_state},
     )
