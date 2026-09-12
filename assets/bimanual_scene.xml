@@ -70,11 +70,12 @@
     <!-- Scene & Tableware Materials -->
     <material name="wood_table_mat" rgba="0.38 0.26 0.18 1" specular="0.3" shininess="0.4"/>
     <material name="table_legs_mat" rgba="0.15 0.15 0.15 1"/>
+    <material name="drawer_cabinet_mat" rgba="0.48 0.34 0.22 1" specular="0.4" shininess="0.5"/>
+    <material name="drawer_face_mat" rgba="0.94 0.94 0.95 1" specular="0.6" shininess="0.7"/>
     <material name="ceramic_white_mat" rgba="0.96 0.96 0.97 1" specular="0.8" shininess="0.9"/>
     <material name="ceramic_blue_mat" rgba="0.18 0.38 0.78 1" specular="0.6" shininess="0.7"/>
     <material name="bottle_blue_mat" rgba="0.15 0.65 0.85 0.85" specular="0.8" shininess="0.9"/>
     <material name="silver_metal_mat" rgba="0.85 0.85 0.88 1" specular="0.9" shininess="0.95"/>
-    <material name="drawer_wood_mat" rgba="0.52 0.38 0.28 1"/>
   </asset>
 
   <!-- Tabletop World -->
@@ -87,7 +88,7 @@
     <body name="dining_table" pos="0 0 0">
       <!-- Main Tabletop Slab -->
       <geom name="table_surface" type="box" size="0.60 0.45 0.02" pos="0 0 0.68" material="wood_table_mat" friction="1.2 0.01 0.001"/>
-      <!-- Modern Beveled Edges -->
+      <!-- Beveled Edges -->
       <geom name="table_edge_left" type="box" size="0.60 0.008 0.018" pos="0 0.442 0.68" rgba="0.32 0.22 0.15 1" contype="0" conaffinity="0"/>
       <geom name="table_edge_right" type="box" size="0.60 0.008 0.018" pos="0 -0.442 0.68" rgba="0.32 0.22 0.15 1" contype="0" conaffinity="0"/>
       <!-- 4 Tapered Modern Black Legs -->
@@ -100,78 +101,87 @@
     <!-- Overhead Camera for Vision / VLA reasoning -->
     <camera name="overhead_cam" pos="0 0 1.6" euler="0 0 0"/>
 
-    <!-- 3D Realistic Mug (Placed on Arm B's reach area) -->
-    <body name="mug" pos="0.05 0.15 0.70">
+    <!-- 3D Upright Ceramic Mug (Standing flat on table in Arm B's reach) -->
+    <body name="mug" pos="0.06 0.18 0.70">
       <freejoint/>
-      <!-- Visual 3D Model -->
+      <!-- Visual 3D Mesh -->
       <geom type="mesh" mesh="mug_mesh" material="ceramic_blue_mat" contype="0" conaffinity="0" group="2"/>
-      <!-- Smooth Physical Collision Cylinder -->
-      <geom name="mug_geom" type="cylinder" size="0.035 0.045" pos="0 0 0.045" mass="0.12" friction="1.8 0.01 0.001" rgba="0 0 0 0" group="3"/>
-      <site name="mug_site" pos="0 0 0.045"/>
+      <!-- Physical Collision Cylinder -->
+      <geom name="mug_geom" type="cylinder" size="0.044 0.048" pos="0 0 0.048" mass="0.14" friction="1.8 0.01 0.001" rgba="0 0 0 0" group="3"/>
+      <site name="mug_site" pos="0 0 0.048" rgba="0 0 0 0" group="3"/>
     </body>
 
-    <!-- Open-Sided Modern Desktop Drawer Unit (In front of Arm A) -->
-    <body name="drawer_unit" pos="0.10 -0.22 0.70">
-      <!-- Base Mount Pad -->
-      <geom name="casing_base" type="box" size="0.11 0.11 0.004" pos="0 0 0.004" material="drawer_wood_mat" contype="0" conaffinity="0"/>
-      <!-- Back Stopper -->
-      <geom name="casing_back" type="box" size="0.006 0.11 0.025" pos="0.104 0 0.025" material="drawer_wood_mat" contype="0" conaffinity="0"/>
-      <!-- Guide Rails (Low sides - 100% open top & open lateral reach) -->
-      <geom name="rail_left" type="box" size="0.10 0.005 0.012" pos="0 0.105 0.012" material="table_legs_mat" contype="0" conaffinity="0"/>
-      <geom name="rail_right" type="box" size="0.10 0.005 0.012" pos="0 -0.105 0.012" material="table_legs_mat" contype="0" conaffinity="0"/>
+    <!-- Fully Covered Modern Desktop Drawer Cabinet (Comfortable reach from Arm A) -->
+    <body name="drawer_unit" pos="0.14 -0.22 0.70">
+      <!-- Outer Cabinet Casing (Covering top, sides, and back) -->
+      <!-- Bottom Base Plate -->
+      <geom name="cabinet_bottom" type="box" size="0.13 0.13 0.004" pos="0 0 0.004" material="drawer_cabinet_mat" contype="0" conaffinity="0"/>
+      <!-- Top Roof Cover -->
+      <geom name="cabinet_top" type="box" size="0.13 0.13 0.005" pos="0 0 0.056" material="drawer_cabinet_mat" contype="0" conaffinity="0"/>
+      <!-- Left Wall -->
+      <geom name="cabinet_left" type="box" size="0.13 0.005 0.026" pos="0 0.125 0.030" material="drawer_cabinet_mat" contype="0" conaffinity="0"/>
+      <!-- Right Wall -->
+      <geom name="cabinet_right" type="box" size="0.13 0.005 0.026" pos="0 -0.125 0.030" material="drawer_cabinet_mat" contype="0" conaffinity="0"/>
+      <!-- Back Wall -->
+      <geom name="cabinet_back" type="box" size="0.005 0.13 0.026" pos="0.125 0 0.030" material="drawer_cabinet_mat" contype="0" conaffinity="0"/>
 
-      <!-- Movable Sliding Tray (Slides towards -X along Arm A's reach) -->
+      <!-- Movable Drawer Section (Slides towards -X, out from under the roof) -->
       <body name="sliding_tray" pos="0 0 0.008">
-        <joint name="drawer_slide" type="slide" axis="-1 0 0" range="0 0.16" damping="1.2" frictionloss="0.05"/>
-        <!-- Tray Floor (Where the plate sits) -->
-        <geom name="tray_floor" type="box" size="0.10 0.10 0.004" pos="0 0 0.004" rgba="0.75 0.62 0.48 1" friction="1.2 0.01 0.001"/>
+        <joint name="drawer_slide" type="slide" axis="-1 0 0" range="0 0.18" damping="1.5" frictionloss="0.05"/>
+        <!-- Spacious Tray Floor (Carrying the plate with ample clearance) -->
+        <geom name="tray_floor" type="box" size="0.12 0.12 0.004" pos="0 0 0.004" rgba="0.75 0.62 0.48 1" friction="1.2 0.01 0.001"/>
         <!-- Rear Lip -->
-        <geom name="tray_back_lip" type="box" size="0.004 0.10 0.015" pos="0.096 0 0.015" rgba="0.65 0.52 0.38 1"/>
-        <!-- Front Wall -->
-        <geom name="tray_front_wall" type="box" size="0.006 0.10 0.022" pos="-0.096 0 0.022" rgba="0.95 0.95 0.95 1"/>
+        <geom name="tray_back_lip" type="box" size="0.004 0.115 0.016" pos="0.116 0 0.016" rgba="0.65 0.52 0.38 1"/>
+        <!-- Front White Drawer Face -->
+        <geom name="tray_front_face" type="box" size="0.006 0.125 0.024" pos="-0.120 0 0.024" material="drawer_face_mat"/>
 
         <!-- Prominent Ergonomic D-Handle with 22mm clearance for reliable hook/pull -->
-        <geom name="handle_post_left" type="cylinder" size="0.004 0.014" pos="-0.112 0.035 0.022" euler="0 1.5708 0" material="table_legs_mat"/>
-        <geom name="handle_post_right" type="cylinder" size="0.004 0.014" pos="-0.112 -0.035 0.022" euler="0 1.5708 0" material="table_legs_mat"/>
-        <geom name="drawer_handle" type="cylinder" size="0.007 0.040" pos="-0.126 0 0.022" euler="1.5708 0 0" material="table_legs_mat" friction="2.0 0.01 0.001"/>
-        <site name="drawer_handle_site" pos="-0.126 0 0.022"/>
+        <geom name="handle_post_left" type="cylinder" size="0.004 0.014" pos="-0.136 0.040 0.024" euler="0 1.5708 0" material="table_legs_mat"/>
+        <geom name="handle_post_right" type="cylinder" size="0.004 0.014" pos="-0.136 -0.040 0.024" euler="0 1.5708 0" material="table_legs_mat"/>
+        <geom name="drawer_handle" type="cylinder" size="0.007 0.045" pos="-0.150 0 0.024" euler="1.5708 0 0" material="table_legs_mat" friction="2.0 0.01 0.001"/>
+        <site name="drawer_handle_site" pos="-0.150 0 0.024" rgba="0 0 0 0" group="3"/>
       </body>
     </body>
 
-    <!-- 3D Realistic Ceramic Plate (Starts inside the sliding tray) -->
-    <body name="plate" pos="0.10 -0.22 0.72">
+    <!-- 3D Realistic Ceramic Plate (Starts enclosed inside the covered drawer) -->
+    <body name="plate" pos="0.14 -0.22 0.72">
       <freejoint/>
-      <!-- Visual 3D Model -->
+      <!-- Visual 3D Mesh -->
       <geom type="mesh" mesh="plate_mesh" material="ceramic_white_mat" contype="0" conaffinity="0" group="2"/>
       <!-- Physical Collision Disc -->
       <geom name="plate_geom" type="cylinder" size="0.090 0.008" pos="0 0 0.008" mass="0.12" friction="1.5 0.01 0.001" rgba="0 0 0 0" group="3"/>
-      <site name="plate_site" pos="0 0 0.008"/>
+      <site name="plate_site" pos="0 0 0.008" rgba="0 0 0 0" group="3"/>
     </body>
 
-    <!-- 3D Realistic Water Bottle (Arm A pouring into Arm B's mug) -->
-    <body name="water_bottle" pos="0.16 -0.10 0.70">
+    <!-- 3D Realistic Clean Water Bottle (Arm A pouring into Arm B's mug) -->
+    <body name="water_bottle" pos="0.10 -0.03 0.70">
       <freejoint/>
-      <!-- Visual 3D Model -->
+      <!-- Visual 3D Mesh -->
       <geom type="mesh" mesh="bottle_mesh" material="bottle_blue_mat" contype="0" conaffinity="0" group="2"/>
       <!-- Physical Collision Cylinder -->
-      <geom name="bottle_geom" type="cylinder" size="0.030 0.080" pos="0 0 0.080" mass="0.15" friction="1.8 0.01 0.001" rgba="0 0 0 0" group="3"/>
-      <site name="bottle_site" pos="0 0 0.080"/>
+      <geom name="bottle_geom" type="cylinder" size="0.025 0.080" pos="0 0 0.080" mass="0.15" friction="1.8 0.01 0.001" rgba="0 0 0 0" group="3"/>
+      <site name="bottle_site" pos="0 0 0.080" rgba="0 0 0 0" group="3"/>
     </body>
 
     <!-- 3D Realistic Spoon (Dinner setting utensil) -->
     <body name="spoon" pos="0.18 0.08 0.70">
       <freejoint/>
       <geom type="mesh" mesh="spoon_mesh" material="silver_metal_mat" mass="0.02" friction="1.2 0.01 0.001"/>
-      <site name="spoon_site" pos="0 0 0.005"/>
+      <site name="spoon_site" pos="0 0 0.005" rgba="0 0 0 0" group="3"/>
     </body>
 
     <!-- 3D Realistic Fork (Dinner setting utensil) -->
     <body name="fork" pos="0.18 0.02 0.70">
       <freejoint/>
       <geom type="mesh" mesh="fork_mesh" material="silver_metal_mat" mass="0.02" friction="1.2 0.01 0.001"/>
-      <site name="fork_site" pos="0 0 0.005"/>
+      <site name="fork_site" pos="0 0 0.005" rgba="0 0 0 0" group="3"/>
     </body>
   </worldbody>
+
+  <!-- Prevent accidental contact glitches between casing and plate -->
+  <contact>
+    <exclude body1="plate" body2="drawer_unit"/>
+  </contact>
 
   <!-- Top-level robot includes -->
   <include file="SO-ARM100/Simulation/SO101/so101_arm_a.xml"/>
