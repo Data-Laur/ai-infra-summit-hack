@@ -13,7 +13,7 @@ DEFAULT_MARKER_MAP = {
     0: "plate",
     1: "mug",
     2: "drawer_handle",
-    3: "water_dispenser",
+    3: "water_bottle",
 }
 
 
@@ -30,10 +30,12 @@ class ScenePipeline:
         self,
         marker_map: Optional[Dict[int, str]] = None,
         homography_matrix: Optional[np.ndarray] = None,
+        drawer_open_threshold: float = 0.28,
     ):
         self.marker_map = {**DEFAULT_MARKER_MAP, **(marker_map or {})}
         self.detector = ArucoDetector()
         self.transform = TabletopTransform(homography_matrix)
+        self.drawer_open_threshold = drawer_open_threshold
 
     def set_homography(self, homography_matrix: np.ndarray) -> None:
         self.transform.homography_matrix = homography_matrix
@@ -76,6 +78,12 @@ class ScenePipeline:
                 scene.drawer.handle_xy = (float(pixel_center[0]), float(pixel_center[1]))
                 scene.drawer.center_x = x
                 scene.drawer.center_y = y
+                scene.drawer.open_fraction = 1.0 if x >= self.drawer_open_threshold else 0.0
+                scene.drawer.pose = {
+                    "x": x,
+                    "y": y,
+                    "state": "open" if scene.drawer.open_fraction else "closed",
+                }
             else:
                 scene.objects.append(
                     ObjectDetection(

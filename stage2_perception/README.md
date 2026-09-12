@@ -105,6 +105,51 @@ python -m perception.calibration_demo
 ./.venv/bin/python perception/lighting_experiment.py
 ```
 
+## Current validation workflow
+
+Install the Stage 2 dependencies from the repository root:
+
+```powershell
+python -m pip install -r stage2_perception/requirements.txt
+```
+
+Run the deterministic four-marker validation:
+
+```powershell
+python stage2_perception/evaluation/validate_perception.py --drawer-state closed
+python stage2_perception/evaluation/validate_perception.py --drawer-state open
+python stage2_perception/evaluation/randomized_eval.py --num-seeds 10 --source synthetic
+```
+
+The validation image uses ArUco IDs 0-3 for plate, mug, drawer handle, and
+water bottle. It maps the 640x480 image corners
+`(80,60), (560,60), (560,420), (80,420)` to tabletop coordinates
+`(0,0), (0.8,0), (0.8,0.6), (0,0.6)` in meters. A localization error of at
+most 0.01 m is required for each marker.
+
+The public API is now image-based:
+
+```python
+from stage2_perception import perceive
+
+scene = perceive(camera_frame)
+```
+
+It returns the shared planner `SceneState` and does not invent object
+positions when the image contains no markers. The MuJoCo camera frame is real,
+but the current MuJoCo scene has no ArUco marker textures, so
+`--source mujoco` correctly reports no detections until Stage 4 adds markers
+or the detector is replaced with a markerless method.
+
+For MuJoCo camera testing:
+
+```powershell
+python stage2_perception/evaluation/randomized_eval.py --num-seeds 10 --source mujoco
+```
+
+This is expected to fail currently with `No markers detected`; that is an
+integration limitation, not a passing perception result.
+
 ## Why this project matters
 
 This work matters because a robot cannot act reliably on objects it cannot localize in a meaningful coordinate system. The project turns scene understanding into a usable spatial representation for tabletop work, which is the practical bridge between perception and action.
