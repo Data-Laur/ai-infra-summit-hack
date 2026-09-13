@@ -5,6 +5,7 @@ Works today with stubs: python scripts/evaluate.py --seeds 10
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -33,6 +34,11 @@ def main() -> int:
         default=None,
         help="Number of seeds to run (uses seeds 0..N-1). Default: configs/default.yaml.",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional JSON path for the complete evaluation report.",
+    )
     args = parser.parse_args()
 
     seeds = list(range(args.seeds)) if args.seeds is not None else seeds_from_config()
@@ -43,6 +49,13 @@ def main() -> int:
         print(f"  seed {r.seed}: {'PASS' if r.success else 'FAIL'}  {r.details}")
 
     print(f"\nSuccess rate: {report.successes}/{len(report.seeds)} = {report.success_rate:.0%}")
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            report.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+        print(f"Report written to {args.output}")
     return 0 if report.successes == len(report.seeds) else 1
 
 
