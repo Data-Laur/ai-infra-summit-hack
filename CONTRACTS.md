@@ -12,7 +12,7 @@ they are pydantic models, so violations fail loudly at the boundary.
 | 1. Voice → Task | Alex | `parse_text(text: str) -> Task` | natural-language command | `Task` | `stage1_voice/` |
 | 1b. Audio → Task | Alex | `parse_command(audio_path: str) -> Task` | path to audio file | `Task` | `stage1_voice/` |
 | 2. Perception | Lauren | `perceive(image=None) -> SceneState` | camera frame (or None in sim) | `SceneState` | `stage2_perception/` |
-| 3. Policy / planning | Bidipta + Azeem | `plan(task: Task, scene: SceneState) -> list[Action]` | `Task`, `SceneState` | ordered `list[Action]` | `stage3_policy/` |
+| 3. Policy / planning | Bidipta + Azeem | `plan_detailed(task: Task, scene: SceneState, *, completed_step_ids=()) -> PlanResult` — the pipeline's contract call (staged observe–act); `plan(task, scene) -> list[Action]` stays as the one-shot convenience | `Task`, `SceneState`, ids of already-executed steps | `PlanResult` (`actions`, `complete`, `pending_step_ids`, `blocked_reason`, …); both raise `PlanningError` if the task cannot be planned | `stage3_policy/` |
 | 4. Bimanual execution | Azeem | `execute(actions: list[Action], sim=None) -> ExecutionResult` | `list[Action]`, MuJoCo sim handle | `ExecutionResult` | `stage4_bimanual/` |
 | 4a. Scene reset | Azeem | `reset_scene(seed: int) -> sim` | seed; randomization ranges read from `configs/default.yaml` | MuJoCo sim handle | `stage4_bimanual/` |
 | 4b. Camera | Azeem | `get_camera_frame(sim) -> image` | sim handle | camera frame (`np.ndarray` in the real implementation) | `stage4_bimanual/` |
@@ -24,15 +24,21 @@ they are pydantic models, so violations fail loudly at the boundary.
 ## Ground rules
 
 - Import types with `from common.types import Task, SceneState, ...` — never redefine them locally.
+- `SceneState` coordinates are the MuJoCo world frame of `assets/bimanual_scene.xml`,
+  metres, table top at z=0.70. Every stage that produces or consumes positions
+  (perception, planning, execution, verify) uses this frame — no local frames.
 - Each stage's public function is re-exported from its package `__init__.py`,
   so callers write `from stage3_policy import plan`.
 - Keep heavy imports (mujoco, lerobot, openvino, opencv, speechmatics, anthropic)
   **out of module top level** until your real implementation lands, or guard them —
-  the stub pipeline must run with only `pydantic` + `pyyaml` installed.
+  the stub pipeline must run with only `pydantic` + `pyyaml` + `numpy` installed.
 - Data flow: `reset_scene(seed)` → `parse_text` → `perceive(get_camera_frame(sim))` →
-  `plan` → `execute` → `verify` (stage 5 is standalone).
-- Recovery: if `verify` returns `replan=True`, the pipeline re-runs
-  `plan → execute → verify` up to `max_retries` (from `configs/default.yaml`),
-  then reports FAIL.
+  staged observe–act loop: `plan_detailed(task, scene, completed_step_ids=...)` →
+  `execute` → add the contiguous successful prefix (by `action_results`) to the
+  completed set → `perceive(get_camera_frame(sim))`, repeated until the plan is
+  `complete` or execution fails → `verify` (stage 5 is standalone).
+- Recovery: if `verify` returns `replan=True`, the pipeline re-runs the staged
+  loop → `verify` — keeping the completed step ids and planning from the fresh
+  observation — up to `max_retries` (from `configs/default.yaml`), then reports FAIL.
 - The single-run loop is implemented once in `common/pipeline.py::run_once` —
   stage 7 must call `run_once` rather than re-implementing it.

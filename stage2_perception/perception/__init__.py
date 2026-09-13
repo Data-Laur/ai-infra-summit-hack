@@ -17,14 +17,15 @@ def perceive(image: Any | None = None) -> SceneState:
 	"""
 	if image is None:
 		# CONTRACTS.md: perceive must accept None in sim, and the stub pipeline
-		# must run with only pydantic + pyyaml. Return the nominal scene.
+		# must run with only pydantic + pyyaml + numpy. Return the nominal scene
+		# in the MuJoCo world frame of assets/bimanual_scene.xml (table top z=0.70).
 		return SceneState(
 			objects={
-				"plate": (0.30, 0.00, 0.02),
-				"mug": (0.20, 0.15, 0.05),
-				"water_bottle": (0.40, -0.10, 0.10),
-				"spoon": (0.25, -0.20, 0.01),
-				"fork": (0.25, -0.25, 0.01),
+				"plate": (0.05, 0.00, 0.715),
+				"mug": (0.06, 0.18, 0.748),
+				"water_bottle": (0.12, -0.04, 0.78),
+				"spoon": (0.18, 0.08, 0.705),
+				"fork": (0.18, 0.02, 0.705),
 			},
 			drawers={"top_drawer": "closed"},
 		)
