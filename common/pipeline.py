@@ -1,7 +1,9 @@
 """Single-run pipeline logic, shared by scripts/run_pipeline.py and stage7_eval.
 
 Recovery: if verify() returns replan=True, re-run plan -> execute -> verify
-up to max_retries (from configs/default.yaml), then report FAIL.
+up to max_retries (from configs/default.yaml), then report FAIL. Each retry
+plans from the scene observed after the previous attempt, and a run succeeds
+only when execution reports success AND verify accepts the scene.
 """
 
 from pathlib import Path
@@ -26,7 +28,7 @@ def run_once(command: str, seed: int = 0, max_retries: int | None = None) -> Run
     """Run the full pipeline once for a seed, with the verify->replan recovery loop."""
     from stage1_voice import parse_text
     from stage2_perception import perceive
-    from stage3_policy import plan
+    from stage3_policy import PlanningError, plan
     from stage4_bimanual import execute, get_camera_frame, reset_scene
     from stage6_verify import verify
 
@@ -55,7 +57,11 @@ def run_once(command: str, seed: int = 0, max_retries: int | None = None) -> Run
     while True:
         attempts += 1
         log.append(f"[plan]     stage3_policy.plan(task, scene)  (attempt {attempts})")
-        actions = plan(task, scene)
+        try:
+            actions = plan(task, scene)
+        except PlanningError as exc:
+            log.append(f"           -> planning refused ({type(exc).__name__}): {exc}")
+            break
         log.append(f"           -> {len(actions)} executable actions")
 
         log.append("[execute]  stage4_bimanual.execute(actions, sim)")
@@ -70,11 +76,14 @@ def run_once(command: str, seed: int = 0, max_retries: int | None = None) -> Run
         verdict = verify(scene_after, task)
         log.append(f"           -> ok={verdict.ok} replan={verdict.replan} ({verdict.details})")
 
-        if verdict.ok:
+        if verdict.ok and result.success:
             success = True
             break
+        if verdict.ok:
+            log.append("           -> execution reported failure, so verify ok is not counted as success")
         if verdict.replan and attempts < max_retries:
-            log.append(f"           -> replan requested: retrying ({attempts + 1}/{max_retries})")
+            log.append(f"           -> replan requested: retrying from the new observation ({attempts + 1}/{max_retries})")
+            scene = scene_after
             continue
         break
 
