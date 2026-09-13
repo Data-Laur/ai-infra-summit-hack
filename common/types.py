@@ -54,7 +54,7 @@ class Task(BaseModel):
 
 
 class SceneState(BaseModel):
-    """Stage 2 output: object and drawer state in tabletop coordinates (meters)."""
+    """MuJoCo world frame of assets/bimanual_scene.xml, metres, table top at z=0.70"""
 
     objects: dict[str, tuple[float, float, float]]  # name -> (x, y, z)
     drawers: dict[str, Literal["open", "closed"]]

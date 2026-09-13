@@ -85,7 +85,7 @@ def test_stub_mode_without_key(monkeypatch: pytest.MonkeyPatch, caplog: pytest.L
     with caplog.at_level(logging.WARNING):
         task = parse_text(COMMAND)
     assert task.command == COMMAND
-    assert len(task.steps) == 5
+    assert len(task.steps) == 6
     assert any("STUB mode" in record.message for record in caplog.records)
 
 
@@ -93,4 +93,32 @@ def test_stub_mode_forced_by_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("VOICE_STUB", "1")
     task = parse_text(COMMAND)
-    assert len(task.steps) == 5
+    assert len(task.steps) == 6
+
+
+def test_pour_implies_pick_of_source_with_same_arm(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every pour must be preceded by an explicit pick of its source by the same arm."""
+    monkeypatch.setenv("VOICE_STUB", "1")
+    task = parse_text(COMMAND)
+    pours = [s for s in task.steps if s.action == ActionType.POUR]
+    assert pours, "stub task must contain a pour step"
+    for pour in pours:
+        picks = [
+            s
+            for s in task.steps
+            if s.action == ActionType.PICK
+            and s.object == pour.source
+            and s.arm == pour.arm
+            and s.id < pour.id
+        ]
+        assert picks, f"no preceding pick of {pour.source} with arm {pour.arm}"
+        assert any(p.id in pour.depends_on for p in picks)
+
+
+def test_system_prompt_states_pour_pick_rule(fake_anthropic) -> None:
+    """The rule must reach the model: pour implies a same-arm pick of the source."""
+    api = fake_anthropic(VALID_TASK_JSON)
+    parse_text(COMMAND)
+    system = api.calls[0]["system"]
+    assert "pour" in system.lower()
+    assert "pick step for the source object with the same arm" in system

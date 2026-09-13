@@ -51,7 +51,7 @@ Requires Python 3.10+.
 python3 -m venv .venv
 source .venv/bin/activate          # macOS / Linux
 .venv\Scripts\activate             # Windows
-pip install pydantic pyyaml        # enough to run the stub pipeline today
+pip install pydantic pyyaml numpy  # enough to run the stub pipeline today
 pip install -r requirements.txt    # full stack, needed for real implementations
 ```
 

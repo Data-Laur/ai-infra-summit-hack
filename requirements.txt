@@ -1,9 +1,9 @@
-# --- Needed to run the stub pipeline (scripts/*.py) — install just these two ---
+# --- Needed to run the stub pipeline (scripts/*.py) — install just these three ---
 pydantic>=2.5
 pyyaml>=6.0
+numpy                  # stage2/3/4 math
 
 # --- Needed only for real stage implementations, not for the stubs ---
-numpy                  # stage2/3/4 math
 opencv-python          # stage2 perception (Lauren)
 mujoco                 # stage4 simulation (Azeem)
 lerobot                # stage3 policy training/inference (Bidipta + Azeem)
