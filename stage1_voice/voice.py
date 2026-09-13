@@ -1,7 +1,7 @@
 """Stage 1: natural-language command -> structured Task (Claude parser + Speechmatics ASR).
 
 STUB mode: without ANTHROPIC_API_KEY (or with VOICE_STUB=1) parse_text returns the
-fixed example Task so the stub pipeline keeps running with only pydantic + pyyaml.
+fixed example Task so the stub pipeline keeps running with only pydantic + pyyaml + numpy.
 The anthropic / speechmatics imports stay inside the functions for the same reason.
 """
 
@@ -38,13 +38,14 @@ def _example_task(command: str) -> Task:
                 depends_on=[2],
             ),
             TaskStep(id=4, action=ActionType.PICK, arm="B", object="mug"),
+            TaskStep(id=5, action=ActionType.PICK, arm="A", object="water_bottle", depends_on=[3]),
             TaskStep(
-                id=5,
+                id=6,
                 action=ActionType.POUR,
                 arm="A",
                 source="water_bottle",
                 into="mug",
-                depends_on=[4],
+                depends_on=[4, 5],
                 requires_hold=HoldRequirement(arm="B", object="mug"),
             ),
         ],
@@ -83,6 +84,10 @@ Rules:
 - Steps are sequential: each step's depends_on lists the ids of steps that must finish first.
   Exception: if a step needs an object held by the other arm (e.g. pouring into a held mug),
   set requires_hold to that arm and object instead of forcing full sequencing.
+- A pour with arm X implies that arm X is holding the source object: always emit an
+  explicit pick step for the source object with the same arm as its own step before
+  the pour, and list that pick's id in the pour step's depends_on — even if the
+  command does not mention picking up the source.
 - If the command mentions an object that is not in the allowed list, do not invent a name.
   Map it to the closest allowed name only if it is an obvious synonym (e.g. "cup" -> "mug").
   Otherwise leave that step out and add the string "unknown_object:<word>" to constraints."""

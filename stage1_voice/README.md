@@ -12,7 +12,7 @@ Parses a natural-language command into a structured `common.types.Task`:
 
 | Var | Purpose |
 |-----|---------|
-| `ANTHROPIC_API_KEY` | Claude parsing. **Unset ⇒ STUB mode**: `parse_text` returns the fixed example Task with a one-line WARNING, so `python scripts/run_pipeline.py` keeps working with only pydantic + pyyaml. |
+| `ANTHROPIC_API_KEY` | Claude parsing. **Unset ⇒ STUB mode**: `parse_text` returns the fixed example Task with a one-line WARNING, so `python scripts/run_pipeline.py` keeps working with only pydantic + pyyaml + numpy. |
 | `VOICE_STUB=1` | Force STUB mode even with a key. |
 | `SPEECHMATICS_API_KEY` | Audio transcription; `parse_command` raises without it. |
 

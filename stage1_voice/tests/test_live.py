@@ -32,11 +32,12 @@ def _step_for(task: Task, action: ActionType, obj: str) -> TaskStep:
 def test_official_command() -> None:
     task = parse_text(EXAMPLE_COMMAND)
     steps = _steps(task)
-    assert len(steps) == 5
+    assert len(steps) == 6
     assert [s.action for s in steps] == [
         ActionType.OPEN_DRAWER,
         ActionType.PICK,
         ActionType.PLACE,
+        ActionType.PICK,
         ActionType.PICK,
         ActionType.POUR,
     ]
@@ -46,6 +47,10 @@ def test_official_command() -> None:
     assert pour.arm == "A"
     assert pour.source == "water_bottle"
     assert pour.into == "mug"
+    # pour implies an explicit preceding pick of the source with the same arm
+    source_pick = _step_for(task, ActionType.PICK, "water_bottle")
+    assert source_pick.arm == pour.arm
+    assert source_pick.id in pour.depends_on
 
 
 def test_official_command_arms_swapped() -> None:
@@ -55,17 +60,19 @@ def test_official_command_arms_swapped() -> None:
     )
     task = parse_text(command)
     steps = _steps(task)
-    assert len(steps) == 5
+    assert len(steps) == 6
     assert [s.action for s in steps] == [
         ActionType.OPEN_DRAWER,
         ActionType.PICK,
         ActionType.PLACE,
+        ActionType.PICK,
         ActionType.PICK,
         ActionType.POUR,
     ]
     assert _step_for(task, ActionType.PICK, "plate").arm == "B"
     assert _step_for(task, ActionType.PICK, "mug").arm == "A"
     assert steps[-1].arm == "B"
+    assert _step_for(task, ActionType.PICK, "water_bottle").arm == "B"
 
 
 def test_different_object_subset() -> None:
