@@ -26,7 +26,7 @@ def plan(task: Task, scene: SceneState) -> list[Action]:
       PreconditionError    impossible sequence (busy arm, unheld object, closed drawer, no free slot)
       ObservationRequired  only a prefix is plannable from this observation; the prefix is attached.
                            plan() returns a complete list or nothing - use
-                           stage3_policy.planner.plan_detailed() for staged observe-act execution.
+                           stage3_policy.plan_detailed() for staged observe-act execution.
     """
     result = plan_detailed(task, scene)
     logger.info("stage3_policy: %s planner produced %d action(s)", result.mode, len(result.actions))

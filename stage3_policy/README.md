@@ -38,9 +38,10 @@ Missing information is never replaced by `(0, 0, 0)`. Missing prerequisites are 
 ### Public API
 
 ```python
-from stage3_policy import plan, PlanningError
+from stage3_policy import plan, plan_detailed, PlanResult, PlanningError
 
-actions = plan(task, scene)        # list[Action], complete, or raises a PlanningError subclass
+result = plan_detailed(task, scene, completed_step_ids={1})   # PlanResult; the pipeline's contract call
+actions = plan(task, scene)        # one-shot convenience: complete list[Action] or raises
 ```
 
 | Exception | Meaning | Example |
@@ -51,14 +52,11 @@ actions = plan(task, scene)        # list[Action], complete, or raises a Plannin
 | `PreconditionError` | impossible sequence | arm busy, placing an unheld object, pouring without picking the bottle, object inside a closed drawer, no free slot |
 | `ObservationRequired` | only a prefix can be planned now | pick from a drawer opened earlier in the same plan; the prefix is attached as `.executable_actions` |
 
-**Staged planning** (Stage 3 API, *not* a shared contract yet):
-
-```python
-from stage3_policy.planner import plan_detailed
-result = plan_detailed(task, scene, completed_step_ids={1})
-```
-
-It returns `actions`, `complete`, `pending_step_ids`, `blocked_reason`, `notes`, `warnings` and `predicted_holdings`.
+**Staged planning** is the shared contract since the `staged-planning` integration:
+`common/pipeline.py::run_once` drives `plan_detailed(task, scene, completed_step_ids=...)`
+in an observe–act loop (CONTRACT_PROPOSAL.md P3, now in `CONTRACTS.md`). It returns a
+`PlanResult` with `actions`, `complete`, `pending_step_ids`, `blocked_reason`, `notes`,
+`warnings` and `predicted_holdings`.
 
 SceneState cannot say which steps already ran or what an arm holds, so the caller passes `completed_step_ids` from its execution log. Arm holdings are then *derived* from those steps, and positions come from the fresh observation. Without that list, a retry plans every step from scratch. For example, re-opening a drawer that is now observed open is refused, because an open drawer's handle pose is not in SceneState.
 
@@ -230,7 +228,7 @@ This shows the table, drawer, tableware and both arms settling under physics. It
 - Stage 4 (`origin/stage4-bimanual`) ignores `target_pose`, `grip_force`, `approach_height` and `arm`, and marks unknown actions successful. The planner's numbers do not reach the robot yet.
 - Frame mismatch with Stage 2, no yaw, no confidence, no handle pose for open drawers, drawers never "unknown".
 - No handoff, no close_drawer, no utensils, no destinations other than `table`.
-- One observation per `plan()` call. Pouring into a held mug and picking from a just-opened drawer need the staged loop, which is not wired.
+- One observation per `plan()` call. Pouring into a held mug and picking from a just-opened drawer need the staged loop, which `common/pipeline.py::run_once` now drives via `plan_detailed`.
 - Slots are fixed candidates. Conservative utensil footprints can block the Stage 4 plate target (slot 0), in which case slot 1 is used.
 - Reach is a heuristic warning; there is no inverse kinematics or collision checking.
 
@@ -250,10 +248,10 @@ This shows the table, drawer, tableware and both arms settling under physics. It
 3. Make `perceive(image)` work in the MuJoCo pipeline (OpenCV dependency, markers or a markerless detector).
 
 **Alex (Stage 1 + integration)**
-1. Add `pick water_bottle, arm A` before the pour in the stub/few-shot example (P4).
+1. ~~Add `pick water_bottle, arm A` before the pour in the stub/few-shot example (P4).~~ Done (`integration-day4`).
 2. Review the `common/pipeline.py` correction and decide how to treat the now-honest `FAIL` on `main`.
-3. Wire the staged observe–act loop with `plan_detailed(..., completed_step_ids=...)` (P3). Catch `stage3_policy.PlanningError`.
-4. Take `CONTRACT_PROPOSAL.md` through a `CONTRACTS.md` PR if the team agrees.
+3. ~~Wire the staged observe–act loop with `plan_detailed(..., completed_step_ids=...)` (P3). Catch `stage3_policy.PlanningError`.~~ Done (`staged-planning`).
+4. Take `CONTRACT_PROPOSAL.md` through a `CONTRACTS.md` PR if the team agrees (P3/P4 rows updated on `staged-planning`; P1/P2/P5 still open).
 
 **Lauren (OpenVINO)**
 There is no model to export yet. Once a checkpoint exists, it is a LeRobot ACT directory (`config.json`, `model.safetensors`, pre/post-processor configs):

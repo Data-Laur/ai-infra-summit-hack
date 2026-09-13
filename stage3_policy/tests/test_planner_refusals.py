@@ -241,8 +241,15 @@ def test_edge_constraint_uses_object_extent_and_can_block_a_slot(cfg, scene):
     assert "keep_glasses_away_from_edge" in caught.value.issues[1]
 
 
-def test_stage1_stub_example_is_refused_before_anything_moves(monkeypatch):
-    """Integration with Alex's real stub Task: it pours without ever picking up the bottle."""
+def test_stage1_stub_example_is_staged_not_refused(monkeypatch):
+    """Integration with Alex's real stub Task.
+
+    CHANGED with the staged-planning integration: the original test asserted a
+    PreconditionError because the stub poured without ever picking up the
+    bottle. Stage 1 has since implemented CONTRACT_PROPOSAL.md P4 (the stub now
+    picks the water_bottle with the pouring arm, 6 steps), so the task is valid
+    and plan_detailed returns a staged partial plan instead of refusing.
+    """
     monkeypatch.setenv("VOICE_STUB", "1")
     from stage1_voice import parse_text
 
@@ -257,9 +264,12 @@ def test_stage1_stub_example_is_refused_before_anything_moves(monkeypatch):
         },
         drawers={"top_drawer": "closed"},
     )
-    with pytest.raises(PreconditionError, match="water_bottle") as caught:
-        plan_detailed(task, nominal_mujoco_scene)
-    assert caught.value.step_id == 5
+    result = plan_detailed(task, nominal_mujoco_scene)
+    # the plate sits inside the closed drawer, so only open_drawer is plannable now
+    assert [a.step_id for a in result.actions] == [1]
+    assert not result.complete
+    assert result.pending_step_ids == (2, 3, 4, 5, 6)
+    assert result.blocked_step_id == 2
 
 
 def test_config_changes_are_not_needed_for_refusals_to_be_explicit():
