@@ -105,7 +105,8 @@
     <body name="mug" pos="0.06 0.18 0.70">
       <freejoint/>
       <!-- Visual 3D Mesh -->
-      <geom type="mesh" mesh="mug_mesh" material="ceramic_blue_mat" contype="0" conaffinity="0" group="2"/>
+      <!-- mass="0" on visual meshes: otherwise MuJoCo gives them default density and the mug weighs 0.94 kg -->
+      <geom type="mesh" mesh="mug_mesh" material="ceramic_blue_mat" contype="0" conaffinity="0" group="2" mass="0"/>
       <!-- Physical Collision Cylinder -->
       <geom name="mug_geom" type="cylinder" size="0.044 0.048" pos="0 0 0.048" mass="0.14" friction="1.8 0.01 0.001" rgba="0 0 0 0" group="3"/>
       <site name="mug_site" pos="0 0 0.048" rgba="0 0 0 0" group="3"/>
@@ -147,7 +148,7 @@
     <body name="plate" pos="0.22 -0.22 0.72">
       <freejoint/>
       <!-- Visual 3D Mesh (scaled to 12cm diameter) -->
-      <geom type="mesh" mesh="plate_mesh" material="ceramic_white_mat" contype="0" conaffinity="0" group="2"/>
+      <geom type="mesh" mesh="plate_mesh" material="ceramic_white_mat" contype="0" conaffinity="0" group="2" mass="0"/>
       <!-- Physical Collision Disc (matching 12cm diameter) -->
       <geom name="plate_geom" type="cylinder" size="0.060 0.006" pos="0 0 0.006" mass="0.10" friction="1.5 0.01 0.001" rgba="0 0 0 0" group="3"/>
       <site name="plate_site" pos="0 0 0.006" rgba="0 0 0 0" group="3"/>
@@ -157,7 +158,7 @@
     <body name="water_bottle" pos="0.12 -0.04 0.70">
       <freejoint/>
       <!-- Visual 3D Mesh -->
-      <geom type="mesh" mesh="bottle_mesh" material="bottle_blue_mat" contype="0" conaffinity="0" group="2"/>
+      <geom type="mesh" mesh="bottle_mesh" material="bottle_blue_mat" contype="0" conaffinity="0" group="2" mass="0"/>
       <!-- Physical Collision Cylinder -->
       <geom name="bottle_geom" type="cylinder" size="0.025 0.080" pos="0 0 0.080" mass="0.15" friction="1.8 0.01 0.001" rgba="0 0 0 0" group="3"/>
       <site name="bottle_site" pos="0 0 0.080" rgba="0 0 0 0" group="3"/>
@@ -188,6 +189,9 @@
   <include file="SO-ARM100/Simulation/SO101/so101_arm_b.xml"/>
 
   <equality>
-    <weld name="b_grasp_mug" site1="b_gripperframe" site2="mug_site" active="false" solref="0.01 1"/>
+    <!-- Body weld: the recorder writes the gripper->mug relative pose into eq_data at the moment the
+         fingers close, so activating it holds the mug where it is (a site weld would snap the mug's
+         frame onto the downward-pointing gripper frame, tipping it 90 degrees). -->
+    <weld name="b_grasp_mug" body1="b_gripper_base" body2="mug" active="false" solref="0.01 1"/>
   </equality>
 </mujoco>
