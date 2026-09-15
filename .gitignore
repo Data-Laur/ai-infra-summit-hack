@@ -8,8 +8,14 @@ __pycache__/
 
 # Virtual envs
 .venv/
+.venv-recorder/
+.venv-learned/
 venv/
 env/
+
+# Recorded datasets / training outputs
+data/
+outputs/
 
 # Secrets
 .env
