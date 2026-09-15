@@ -34,6 +34,7 @@ class TrainSettings:
     batch_size: int = 8
     save_freq: int = 200
     seed: int = 1000
+    num_workers: int = 0  # forked dataloader workers deadlock on macOS; the datasets are small anyway
 
 
 def build_train_command(settings: TrainSettings) -> list[str]:
@@ -51,6 +52,7 @@ def build_train_command(settings: TrainSettings) -> list[str]:
         f"--batch_size={settings.batch_size}",
         f"--save_freq={settings.save_freq}",
         f"--seed={settings.seed}",
+        f"--num_workers={settings.num_workers}",
         "--wandb.enable=false",
     ]
 
@@ -77,6 +79,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--device", default=TrainSettings.device, help="cpu, cuda or xpu - check your install first")
     parser.add_argument("--steps", type=int, default=TrainSettings.steps)
     parser.add_argument("--batch-size", type=int, default=TrainSettings.batch_size)
+    parser.add_argument("--num-workers", type=int, default=TrainSettings.num_workers, help="dataloader worker processes (0 = load in the main process)")
     parser.add_argument("--run", action="store_true", help="actually start training (refused unless preflight passes)")
     args = parser.parse_args(argv)
 
@@ -88,6 +91,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         steps=args.steps,
         batch_size=args.batch_size,
         save_freq=args.steps,
+        num_workers=args.num_workers,
     )
     command = build_train_command(settings)
     print("command:", subprocess.list2cmdline(command))

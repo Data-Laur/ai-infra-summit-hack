@@ -2,18 +2,20 @@ import os
 import json
 import mujoco
 import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
 from pathlib import Path
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
-FPS = 25
-PHYSICS_STEPS_PER_FRAME = 20
-MOTOR_NAMES = tuple(f"{arm}_{j}" for arm in ("a","b") for j in
-    ("shoulder_pan","shoulder_lift","elbow_flex","wrist_flex","wrist_roll","gripper"))
-STATE_KEY, ACTION_KEY = "observation.state", "action"
-IMAGE_KEY = "observation.images.overhead"
-SUCCESS_KEY, DONE_KEY = "next.success", "next.done"
-CODEBASE_VERSION, ROBOT_TYPE = "v3.0", "butler_bimanual_so101_sim"
+from stage3_policy.learned import schema
+
+FPS = schema.FPS
+PHYSICS_STEPS_PER_FRAME = schema.PHYSICS_STEPS_PER_FRAME
+MOTOR_NAMES = schema.MOTOR_NAMES
+STATE_KEY, ACTION_KEY = schema.STATE_KEY, schema.ACTION_KEY
+IMAGE_KEY = schema.IMAGE_KEY
+SUCCESS_KEY, DONE_KEY = schema.SUCCESS_KEY, schema.DONE_KEY
+CODEBASE_VERSION, ROBOT_TYPE = schema.CODEBASE_VERSION, schema.ROBOT_TYPE
+INSTRUCTION = "pick up the mug with arm B"
+REPO_ID = "local/butler_demos_pick"  # local-only label; never resolved against the HF Hub
 EVAL_SEEDS = set(range(10))
 
 B_JOINTS = ["b_shoulder_pan","b_shoulder_lift","b_elbow_flex","b_wrist_flex","b_wrist_roll"]
@@ -22,8 +24,6 @@ LIMITS_B = {"b_shoulder_pan": (-1.91986,1.91986), "b_shoulder_lift": (-1.74533,1
             "b_wrist_roll": (-2.74385,2.84121)}
 
 OUT_ROOT = Path("data/butler_demos/pick")
-(OUT_ROOT / "meta").mkdir(parents=True, exist_ok=True)
-(OUT_ROOT / "data").mkdir(parents=True, exist_ok=True)
 
 model = mujoco.MjModel.from_xml_path("assets/bimanual_scene_weld.xml")
 
@@ -124,51 +124,53 @@ def record_episode(seed, split):
     success = bool(lift_height > 0.05)
     return frames, success
 
-# dof_and_pos_map unused placeholder removed
 
-import sys
+def get_or_create_dataset():
+    """Real LeRobotDataset writer: guarantees the on-disk layout matches what
+    lerobot-train actually loads (chunked parquet, meta/episodes/, meta/tasks.jsonl,
+    PNG images), instead of a hand-rolled approximation."""
+    if (OUT_ROOT / "meta" / "info.json").exists():
+        return LeRobotDataset.resume(repo_id=REPO_ID, root=str(OUT_ROOT))
+    OUT_ROOT.parent.mkdir(parents=True, exist_ok=True)
+    return LeRobotDataset.create(
+        repo_id=REPO_ID,
+        fps=FPS,
+        root=str(OUT_ROOT),
+        robot_type=ROBOT_TYPE,
+        features=schema.lerobot_features(use_videos=False),
+        use_videos=False,
+    )
+
+
 seeds = [int(s) for s in os.environ.get("SEEDS", "101").split(",")]
 split = os.environ.get("SPLIT", "train")
 
-meta_path = OUT_ROOT/"meta"/"butler_episodes.json"
-info_path = OUT_ROOT/"meta"/"info.json"
+dataset = get_or_create_dataset()
+
+meta_path = OUT_ROOT / "meta" / "butler_episodes.json"
 episodes_meta = json.loads(meta_path.read_text())["episodes"] if meta_path.exists() else []
-episode_index = len(episodes_meta)
-total_frames = json.loads(info_path.read_text())["total_frames"] if info_path.exists() else 0
 
 for seed in seeds:
+    episode_index = dataset.meta.total_episodes
     frames, success = record_episode(seed, split)
     n = len(frames)
-    rows = []
     for fi, fr in enumerate(frames):
-        rows.append({
-            "episode_index": episode_index, "frame_index": fi, "timestamp": fi / FPS,
-            "index": total_frames + fi, "task_index": 0,
-            STATE_KEY: fr["state"].tolist(), ACTION_KEY: fr["action"].tolist(),
-            SUCCESS_KEY: bool(success and fi == n-1), DONE_KEY: bool(fi == n-1),
+        dataset.add_frame({
+            STATE_KEY: fr["state"],
+            ACTION_KEY: fr["action"],
+            IMAGE_KEY: fr["image"],
+            SUCCESS_KEY: np.array([success and fi == n - 1]),
+            DONE_KEY: np.array([fi == n - 1]),
+            "task": INSTRUCTION,
         })
-    pq.write_table(pa.Table.from_pylist(rows), OUT_ROOT/"data"/f"episode_{episode_index:06d}.parquet")
+    dataset.save_episode()
     episodes_meta.append({
         "episode_index": episode_index, "seed": seed, "skill": "pick", "arm": "B",
-        "object": "mug", "instruction": "pick up the mug with arm B", "split": split,
+        "object": "mug", "instruction": INSTRUCTION, "split": split,
         "success": success, "physics_only": True,
     })
-    total_frames += n
     print(f"episode {episode_index} seed={seed} split={split} frames={n} success={success}")
-    episode_index += 1
 
-info = {
-    "codebase_version": CODEBASE_VERSION, "fps": FPS, "robot_type": ROBOT_TYPE,
-    "total_episodes": episode_index, "total_frames": total_frames,
-    "features": {
-        "timestamp": {}, "frame_index": {}, "episode_index": {}, "index": {}, "task_index": {},
-        STATE_KEY: {"dtype":"float32","shape":[12],"names": list(MOTOR_NAMES)},
-        ACTION_KEY: {"dtype":"float32","shape":[12],"names": list(MOTOR_NAMES)},
-        IMAGE_KEY: {"dtype":"image","shape":[480,640,3],"names":["height","width","channels"]},
-        SUCCESS_KEY: {"dtype":"bool","shape":[1],"names": None},
-        DONE_KEY: {"dtype":"bool","shape":[1],"names": None},
-    }
-}
-info_path.write_text(json.dumps(info, indent=2))
+dataset.finalize()
 meta_path.write_text(json.dumps({"episodes": episodes_meta}, indent=2))
-print("dataset now has", episode_index, "episodes,", total_frames, "frames at", OUT_ROOT)
+print("dataset now has", dataset.meta.total_episodes, "episodes,", dataset.meta.total_frames, "frames at", OUT_ROOT)
